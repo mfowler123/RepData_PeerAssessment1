@@ -1,0 +1,191 @@
+---
+title: "Actitity Montoring"
+author: "Mary Fowler"
+date: "October 1, 2019"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(tidy.opts= list( width.cutoff = 60), tidy=TRUE)
+#install.packages("tidyverse")
+library(tidyverse)
+library(lubridate)
+
+```
+
+##Task 1: Loading and preprocessing the data
+
+```{r}
+#Read in data
+activity <- read_csv("activity.csv")
+```
+##Task 2: Analysis of Steps per Day
+
+For this part of the assignment, you can ignore the missing values in the dataset.
+
+Calculate the total, average and median number of steps taken per day
+
+
+
+```{r}
+Act_per_day <- activity%>%group_by(date)
+steps_per_day <-
+  summarise(Act_per_day,
+            tot=sum(steps,na.rm=TRUE),
+            avg=mean(steps,na.rm=TRUE),
+            med=median(steps,na.rm=TRUE))
+```
+
+Table of Total, Mean and Median Steps per Day
+
+```{r}
+print.data.frame(steps_per_day)
+```
+
+Histogram of the total number of steps taken each day
+
+```{r}
+ggplot(data= steps_per_day) +
+  geom_histogram(mapping=aes(x=tot))
+```
+
+##Task 3: Analysis of Average Daily Activity Pattern
+
+```{r}
+Act_per_TP <- activity%>%group_by(interval)
+steps_per_TP <-
+  summarise(Act_per_TP,
+            avg=mean(steps,na.rm=TRUE))
+```
+
+```{r}
+ggplot(data= steps_per_TP, aes(x=interval,y=avg) ) +
+  geom_line()
+```
+
+```{r}
+max_steps_in_TP <- max(steps_per_TP$avg)
+ filter(steps_per_TP,max_steps_in_TP==steps_per_TP$avg)
+
+```
+
+Table of Mean Steps per Time Period
+```{r}
+print.data.frame(steps_per_TP)
+```
+## Task 4: Impute missing values
+
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with \color{red}{\verb|NA|}NAs)
+```{r}
+Num_NA <- sum(is.na(activity$steps))
+Num_NA
+```
+
+Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+The strategy used in the this analysis: replace the missing steps value with the mean for that time period
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in. dataset = act2
+
+```{r}
+activity <- mutate(activity,rn=1:nrow(activity))
+
+
+act2 <- merge.data.frame(activity, steps_per_TP,
+                 by.x="interval",
+                 by.y="interval"
+                 )
+act2[is.na(act2$steps),"steps"] <- act2[is.na(act2$steps),"avg"]
+act2 <- act2[order(act2$rn),]
+```
+
+
+Make a histogram of the total number of steps taken each day 
+
+```{r}
+Act2_per_day <- act2%>%group_by(date)
+steps2_per_day <-
+  summarise(Act2_per_day,
+            tot=sum(steps,na.rm=TRUE),
+            avg=mean(steps,na.rm=TRUE),
+            med=median(steps,na.rm=TRUE))
+```
+
+
+```{r}
+#steps2_per_day
+print.data.frame(steps2_per_day)
+```
+
+```{r}
+ggplot(data= steps2_per_day) +
+  geom_histogram(mapping=aes(x=tot))
+```
+
+
+Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment?
+
+```{r}
+cbind(steps_per_day$avg,steps2_per_day$avg,steps_per_day$avg-steps2_per_day$avg)
+```
+
+```{r}
+cbind(steps_per_day$med,steps2_per_day$med,steps_per_day$med-steps2_per_day$med)
+```
+
+```{r}
+median(steps_per_TP$avg)
+```
+
+What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+There are fewer time periods with a total steps = 0.
+
+##Task 5: Weekday/Weekend Analysis
+
+Form a factor variable inicating whether a given date is a weekday or weekend day.
+
+
+```{r}
+weekend <- (wday(ymd(act2$date))==1|wday(ymd(act2$date))==7)*1
+act2<- cbind(act2,weekend)
+act2$weekend <- as.factor(act2$weekend)
+act2$weekend <- plyr::mapvalues(act2$weekend, 
+                  from=c("0","1"), 
+                  to = c("Weekday", "Weekend"))
+```
+
+Are there differences in activity patterns between weekdays and weekends?
+
+Make a panel plot containing a time series plot (i.e. \color{red}{\verb|type = "l"|}type="l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+
+```{r}
+Act2_per_TP <- act2 %>% group_by(interval,weekend)
+steps2_per_TP <-
+  summarise(Act2_per_TP,
+            avg=mean(steps,na.rm=TRUE))
+```
+
+```{r}
+ggplot(data= steps2_per_TP, aes(x=interval,y=avg) ) +
+  geom_line() +  facet_wrap(~weekend) 
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
